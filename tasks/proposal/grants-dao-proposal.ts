@@ -2,6 +2,7 @@ import { task } from 'hardhat/config';
 import { DRE, getImpersonatedSigner, advanceBlockTo, advanceBlock } from '../../helpers/misc-utils';
 
 import AaveTokenV2Artifact from '@aave/aave-token/artifacts/contracts/token/AaveTokenV2.sol/AaveTokenV2.json';
+import ERC20Artifact from '@aave/aave-token/artifacts/contracts/open-zeppelin/ERC20.sol/ERC20.json';
 import GovernanceV2Artifact from '@aave/governance-v2/artifacts/contracts/governance/AaveGovernanceV2.sol/AaveGovernanceV2.json';
 
 task('grants-dao-proposal', 'proposal to fund grants dao').setAction(async (_, localBRE) => {
@@ -23,6 +24,8 @@ task('grants-dao-proposal', 'proposal to fund grants dao').setAction(async (_, l
   const controllerAaveEcosystemReserveAddress = '0x1e506cbb6721b83b1549fa1558332381ffa61a93';
   const grantsDaoMultiSig = '0x89C51828427F70D77875C6747759fB17Ba10Ceb0';
   const aaveEcosystemReserveAddress = '0x25F2226B597E8F9514B3F68F00f494cF4f286491';
+  const controllerV2CollectorAddress = '0x7AB1e5c406F36FE20Ce7eBa528E182903CA8bFC7';
+  const aaveCollectorV2Address = '0x464C71f6c2F760DdA6093dCB91C24c39e5d6e18c';
 
   const aaveGovernanceAddress = '0xEC568fffba86c094cf06b22134B23074DFE2252c';
   const aaveGovernance = new ethers.Contract(
@@ -34,29 +37,50 @@ task('grants-dao-proposal', 'proposal to fund grants dao').setAction(async (_, l
   const aaveTokenAddress = '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9';
   const aaveToken = new ethers.Contract(aaveTokenAddress, AaveTokenV2Artifact.abi, proposalSigner);
 
+  const ausdcTokenAddress = '0xBcca60bB61934080951369a648Fb03DF4F96263C';
+  const ausdcToken = new ethers.Contract(ausdcTokenAddress, ERC20Artifact.abi, proposalSigner);
+
   const initialReserveBalance = await aaveToken.balanceOf(aaveEcosystemReserveAddress);
   const initialGrantsBalance = await aaveToken.balanceOf(grantsDaoMultiSig);
+
+  const initialReserveAusdcBalance = await ausdcToken.balanceOf(aaveCollectorV2Address);
+  const initialGrantsAusdcBalance = await ausdcToken.balanceOf(grantsDaoMultiSig);
 
   console.log(`initialReserveBalance: ${ethers.utils.formatUnits(initialReserveBalance, 18)}`);
   console.log(`initialGrantsBalance: ${ethers.utils.formatUnits(initialGrantsBalance, 18)}`);
 
-  const signature = 'transfer(address,address,uint256)';
+  console.log(
+    `initialReserveAusdcBalance: ${ethers.utils.formatUnits(initialReserveAusdcBalance, 18)}`
+  );
+  console.log(
+    `initialGrantsAusdcBalance: ${ethers.utils.formatUnits(initialGrantsAusdcBalance, 18)}`
+  );
 
-  // $2,000,000 / 189.67 (coingecko @ 12/7/2021 1:45pm EST)
-  const grantAmount = ethers.utils.parseUnits('41245.62', 18);
-  console.log(`Grant Amount (no decimals):  ${grantAmount}`);
+  const signature = 'transfer(address,address,uint256)';
+  const signatureApprove = 'approve(address,address,uint256)';
+
+  // $4,500,000 / 137.95 (coingecko @ 5/6/2022 6:00pm EST)
+  const grantAmount = ethers.utils.parseUnits('32620.51', 18);
+  console.log(`AAVE Grant Amount (no decimals):  ${grantAmount}`);
   const encodedData = ethers.utils.defaultAbiCoder.encode(
     ['address', 'address', 'uint256'],
     [aaveTokenAddress, grantsDaoMultiSig, grantAmount]
   );
 
+  const ausdcGrantAmount = ethers.utils.parseUnits('1500000', 6);
+  console.log(`aUSDC Grant Amount (no decimals):  ${ausdcGrantAmount}`);
+  const encodedAusdcData = ethers.utils.defaultAbiCoder.encode(
+    ['address', 'address', 'uint256'],
+    [ausdcTokenAddress, grantsDaoMultiSig, ausdcGrantAmount]
+  );
+
   const executorAddress = '0xEE56e2B3D491590B5b31738cC34d5232F378a8D5';
 
-  const targets = [controllerAaveEcosystemReserveAddress];
-  const values = [0];
-  const signatures = [signature];
-  const calldatas = [encodedData];
-  const withDelegatecalls = [false];
+  const targets = [controllerAaveEcosystemReserveAddress, controllerV2CollectorAddress];
+  const values = [0, 0];
+  const signatures = [signature, signatureApprove];
+  const calldatas = [encodedData, encodedAusdcData];
+  const withDelegatecalls = [false, false];
   const ipfsHash = '0x876d101db93e098b91046c83f57bcfbd4cfcc0a08af8ed460ce151920f7a69f0';
 
   console.log('\n INPUTS:');
