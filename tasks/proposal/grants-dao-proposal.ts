@@ -59,15 +59,15 @@ task('grants-dao-proposal', 'proposal to fund grants dao').setAction(async (_, l
   const signature = 'transfer(address,address,uint256)';
   const signatureApprove = 'approve(address,address,uint256)';
 
-  // $4,500,000 / 137.95 (coingecko @ 5/6/2022 6:00pm EST)
-  const grantAmount = ethers.utils.parseUnits('32620.51', 18);
+  // $3,000,000 / 136.74 (coingecko @ 5/7/2022 4:00pm EST)
+  const grantAmount = ethers.utils.parseUnits('21939.45', 18);
   console.log(`AAVE Grant Amount (no decimals):  ${grantAmount}`);
   const encodedData = ethers.utils.defaultAbiCoder.encode(
     ['address', 'address', 'uint256'],
     [aaveTokenAddress, grantsDaoMultiSig, grantAmount]
   );
 
-  const ausdcGrantAmount = ethers.utils.parseUnits('1500000', 6);
+  const ausdcGrantAmount = ethers.utils.parseUnits('3000000', 6);
   console.log(`aUSDC Grant Amount (no decimals):  ${ausdcGrantAmount}`);
   const encodedAusdcData = ethers.utils.defaultAbiCoder.encode(
     ['address', 'address', 'uint256'],
@@ -139,7 +139,7 @@ task('grants-dao-proposal', 'proposal to fund grants dao').setAction(async (_, l
   console.log(`advance to execution time`);
   const currentBlock = await ethers.provider.getBlock(await ethers.provider.getBlockNumber());
   const { timestamp } = currentBlock;
-  const fastForwardTime = queueTxReceipt.events[1].args.executionTime.sub(timestamp).toNumber();
+  const fastForwardTime = queueTxReceipt.events[2].args.executionTime.sub(timestamp).toNumber();
   await advanceBlock(timestamp + fastForwardTime + 10);
 
   // execute
